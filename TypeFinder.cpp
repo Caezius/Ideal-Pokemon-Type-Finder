@@ -244,6 +244,8 @@ class PkmnType {
 
         string name;
 
+        vector < vector <string> > all_interactions;
+
         PkmnType(string name, vector <string> strengths, vector <string> ineffectives, vector<string> for_naught, vector <string> weaknesses, vector <string> resistances, vector <string> immunities){
             this-> name = name;
 
@@ -255,11 +257,16 @@ class PkmnType {
             this-> resistances = resistances;
             this-> immunities = immunities;
 
+            this-> all_interactions = {strengths, ineffectives, for_naught, weaknesses, resistances, immunities};
+
             
         }
 
         //returns the type matchups for a combination of two types
-        vector<vector <string>> getCombo(PkmnType other_type){
+        PkmnType getCombo(PkmnType other_type){
+            PkmnType returned_type("", {}, {}, {}, {}, {}, {});
+            string combo_name = this -> name + "-" + other_type.name;
+
             vector<string> combined_weaknesses = combineVectors(this->weaknesses, other_type.weaknesses);
             vector<string> combined_resistances = combineVectors(this->resistances, other_type.resistances);
             vector<string> combined_immunities = combineVectors(this->immunities, other_type.immunities);
@@ -285,16 +292,32 @@ class PkmnType {
             vector<string> new_naughts = combineVectors(this->for_naught, other_type.for_naught);
             new_naughts = replaceRepeats2(new_naughts);
 
+            
+            returned_type = PkmnType(combo_name, new_strengths, new_ineffectives, new_naughts, new_weaknesses, new_resistances, new_immunities);
+
             vector<vector <string>> new_matchups = {new_strengths, new_ineffectives, new_naughts, new_weaknesses, new_resistances, new_immunities};
-            return new_matchups;
+            return returned_type;
         }
+
+        void printInteractions(){
+            vector <string> interaction_names = {"Strong Against", "Ineffective Against", "Doesn't Affect", "Weak To", "Resistant To", "Immune To"};
+
+            //should be 6 interactions between other types (weak against, ineffective against), so r, the number of rows, should be 6.
+            for (int r = 0; r < 6; r++){
+                cout << interaction_names[r] << ": \n";
+
+            for (int c = 0; c < int(this->all_interactions[r].size()); c++){
+                cout << this->all_interactions[r][c] << "\n";
+            }
+
+            cout << "\n";
+            }
+
+        }
+
 
 };
 
-//prints a vector line by line
-void print2DVector(vector< vector<string> > vector2D){
-    
-}
 
 void print1DVector(vector<string> vector1D){
     for (int i = 0; i < int(vector1D.size()); i++){
@@ -303,34 +326,24 @@ void print1DVector(vector<string> vector1D){
 }
 
 //asks the user for the type names
-void askForCombo(auto types){
-    string type_name1;
-    string type_name2;
-
-    cout << "Enter one type: " << "\n";
-    cin >> type_name1;
-    cout << type_name1 << "\n";
-
-    cout << "Enter a second type: " << "\n";
-    cin >> type_name2;
-    cout << type_name2 << "\n" << "\n";
+void printCombo(string type_name1, string type_name2, map <string, PkmnType> types_map){
 
     PkmnType type1("type1", {},{},{},{},{},{});
     PkmnType type2("type2", {},{},{},{},{},{});
 
-    if (checkKeyIn(type_name1, types) == true && checkKeyIn(type_name2, types) == false){
+    if (types_map.find(type_name1) == types_map.end() ||  types_map.find(type_name2) == types_map.end() ){
         cout << "ERROR: One or more type names passed to 'askForCombo()' is not in the map of known types.";
         return;
     }
 
-    for (auto const &pair : types){
+    for (auto const &pair : types_map){
         if (pair.first == type_name1){
             type1 = pair.second;
             break;
         }
     }
 
-    for (auto const &pair : types){
+    for (auto const &pair : types_map){
         if (pair.first == type_name2){
             type2 = pair.second;
             break;
@@ -339,15 +352,16 @@ void askForCombo(auto types){
 
     vector <string> details = {"Strong Against", "Ineffective Against", "Doesn't Affect", "Weak To", "Resistant To", "Immune To"};
 
-    auto combo = type1.getCombo(type2);
-    
+    PkmnType combo("", {}, {}, {}, {}, {}, {}); 
+    combo = type1.getCombo(type2);
+    vector<vector <string> > interactions = combo.all_interactions;
     
     //should be 6 interactions between other types (weak against, ineffective against), so r, the number of rows, should be 6.
     for (int r = 0; r < 6; r++){
         cout << details[r] << ": \n";
 
-        for (int c = 0; c < int(combo[r].size()); c++){
-            cout << combo[r][c] << "\n";
+        for (int c = 0; c < int(interactions[r].size()); c++){
+            cout << interactions[r][c] << "\n";
         }
 
         cout << "\n";
@@ -355,100 +369,333 @@ void askForCombo(auto types){
 
 
 }
-//returns a true if a key is in a given map, or false if the key is not.
-bool checkKeyIn(auto key, auto map){
-
-    for (auto const &pair : map){
-        
-        if (key == pair.first){
-            return true;
-        }
-    }
-
-    return false;
-
-}
 
 //finds the type combo for a type, that has the most resistances
-void findMostResistances(string type_name, auto types_map){
-    int num_resistances;
-    int highest_r = 0;
-    vector <string> best_combos;
-    PkmnType type("", {},{},{},{},{},{});
-    PkmnType other_type("", {},{},{},{},{},{});
+void findMostResistances(string type_name, map <string, PkmnType> types_map){
+    PkmnType type("", {}, {}, {}, {}, {}, {});
     
-    if (checkKeyIn(type_name, types_map) == false ){
+    bool found_type = false;
+
+    PkmnType combo("", {}, {}, {}, {}, {}, {});
+    
+    string other_type_name;
+    PkmnType other_type("", {}, {}, {}, {}, {}, {});
+    
+    int num_resistances;
+    int max_resistances = 0;
+    
+    
+    vector < PkmnType > combo_holder;
+    vector < string > combo_names;
+    
+    string combo_with_count;
+
+    //set the type object by finding its associated object in the map
+    for (auto const &pair : types_map){
+
+        if (pair.second.name == type_name){
+            type = pair.second;
+            found_type = true;
+        }
+
+    }
+
+    //make sure the type name requested does belong to one of the types in the types map
+    if (found_type == false){
         cout << "ERROR: No type named " + type_name;
         return;
-    };
+    }
 
-    //loop through the types map and find the type object associated with this name
+    //loop through the type map, test combos, and find the best one
     for (auto const &pair : types_map){
+        other_type = pair.second;
+        other_type_name = other_type.name;
+
+        // make sure we're not checking the combination of a type with itself
+        if (type_name != other_type_name){
+            combo = type.getCombo(other_type);
+            num_resistances = int(combo.resistances.size());
+            
+            if(num_resistances > max_resistances){
+                max_resistances = num_resistances;
+                
+            }
+
+            combo_holder.push_back(combo); 
+        
+        }
+    }
+
+    // now that we have the highest number of resistances of all the combinations,
+    // start from that highest number of resistances, then go down to 0
+    // for each number of resistances, find the combination that has that number of resistances we're checking, 
+    // then add that combo's name (with the current number of resistances added to the end in parentheses) to the returned vector
+    for (int current_r = max_resistances; current_r >= 0; current_r--){
+        
+        for (int i = 0; i < int(combo_holder.size()); i++){
+            
+            combo = combo_holder[i];
+            
+            num_resistances = int(combo.resistances.size());
+            
+            if (num_resistances == current_r){
+                combo_with_count = combo.name;
+                combo_with_count += "(" + to_string(num_resistances) + ")";
+                combo_names.push_back(combo_with_count);
+            }
+        }
+        
+    }
+
+    cout << "Resistances of " << type_name << "-Type Combinations: \n";    
+    print1DVector(combo_names);
+    return;
+}
+//prints the weaknesses of every combination of type type_name (not including the type and itself)
+void findLeastWeaknesses(string type_name, map <string, PkmnType> types_map){
+    PkmnType type("", {}, {}, {}, {}, {}, {});
+    bool found_type = false;
+
+    PkmnType combo("", {}, {}, {}, {}, {}, {});
     
-        if (pair.first == type_name){
+    string other_type_name;
+    PkmnType other_type("", {}, {}, {}, {}, {}, {});
+    
+    int num_weaknesses;
+    bool num_weaknesses_set = false;
+    int least_weaknesses;
+    int max_weaknesses; //needed to set the upper limit when we print each combination by weaknesses
+    
+    vector < PkmnType > combo_holder;
+    vector < string > combo_names;
+
+    string combo_with_count;
+
+    //set the type variable by finding type_name's associated object in the map
+    for (auto const &pair : types_map){
+
+        if (pair.second.name == type_name){
             type = pair.second;
+            found_type = true;
         }
 
     }
-    
-    //loop through the map and test the given type with every other type in the map
+
+    //make sure the type name requested does belong to one of the types in the types map
+    if (found_type == false){
+        cout << "ERROR: No type named " + type_name;
+        return;
+    }
+
+    //loop through the type map, test combos, and find the best one
     for (auto const &pair : types_map){
-        //don't check the combination if it's the same type
-        if (pair.first != type_name){
-            other_type = pair.second;
-            vector <vector <string> > combo = type.getCombo(other_type);
+        other_type = pair.second;
+        other_type_name = other_type.name;
+        
+        // make sure we're not checking the combination of a type with itself
+        if (type_name != other_type_name){
+            combo = type.getCombo(other_type);
+            num_weaknesses = int(combo.weaknesses.size());
             
-            //the vector containing the resistances should be the 5th one
-            num_resistances = int(combo[4].size());
-            if (num_resistances > highest_r){
-                highest_r = num_resistances;
+            //initialize num_weaknesses to the first tested combo's
+            if (num_weaknesses_set == false){
+                num_weaknesses = num_weaknesses;
+                num_weaknesses_set = true;
+            }
+
+            // update least weaknesses if needed
+            if(num_weaknesses < least_weaknesses){
+                least_weaknesses = num_weaknesses;     
+            }
+
+            // update max weaknesses if needed
+            if (num_weaknesses > max_weaknesses){
+                max_weaknesses = num_weaknesses;
+            }
+            
+            combo_holder.push_back(combo); 
+            
+        }
+    }
+
+    // now that we have the highest strength of all the combinations,
+    // start from that highest strength, then go down to 0
+    // for each strength, find the combination that has that number of strengths we're checking, 
+    // then add that combo's name (with the current num_strengths added to the end in parentheses) to the returned vector
+    for (int current_w = least_weaknesses; current_w <= max_weaknesses; current_w++){
+        
+        for (int i = 0; i < int(combo_holder.size()); i++){
+            num_weaknesses = combo_holder[i].weaknesses.size();
+            
+            if (num_weaknesses == current_w){
+                combo_with_count = combo_holder[i].name;
+                combo_with_count += "(" + to_string(num_weaknesses) + ")";
+                combo_names.push_back(combo_with_count);
             }
         }
-
+        
     }
 
-    //loop back through the other types again
-    //but this time add those that have the highest number of resistances variable that we found
-
-    for (auto const &pair : types_map){
-        if (pair.first != type_name){
-            other_type = pair.second;
-            vector <vector <string> > combo = type.getCombo(other_type);
-            
-            num_resistances = int(combo[4].size());
-            //if it's one of the types that has that highest resistance we found, add a string with both names to the returned vector
-            if (num_resistances == highest_r){
-                best_combos.push_back(type.name + "-" + other_type.name + "(" + to_string(highest_r) + ")");
-            }
-        }
-
-    }
-
-    print1DVector(best_combos);
+    cout << "Weaknesses of " << type_name << "-Type Combinations: \n";    
+    print1DVector(combo_names);
+    return;
 }
 
-int main() {
-    std::map <string, PkmnType> types;
+void findMostStrengths(string type_name, map <string, PkmnType> types_map){
+    PkmnType type("", {}, {}, {}, {}, {}, {});
     
-    PkmnType Dragon("Dragon", {"Dragon"}, {"Steel"}, {"Fairy"}, {"Ice", "Dragon", "Fairy"}, {"Fire", "Water", "Grass", "Electric"}, {});
-    PkmnType Water("Water", {"Fire", "Rock", "Ground"}, {"Water", "Grass", "Electric"}, {}, {"Electric", "Grass"}, {"Water", "Ice", "Fire"}, {});
-    PkmnType Fire ("Fire", {"Ice", "Bug", "Grass", "Steel"}, {"Fire", "Water", "Rock", "Dragon"}, {}, {"Water", "Ground", "Rock"}, {"Fire", "Grass", "Ice", "Bug", "Steel", "Fairy"}, {});
-    PkmnType Ice ("Ice", {"Grass", "Ground", "Flying", "Dragon"}, {"Fire", "Water", "Ice", "Steel"}, {}, {"Fire", "Fighting", "Rock", "Steel"}, {"Ice"}, {});
-    PkmnType Flying("Flying", {"Grass", "Fighting", "Bug"}, {"Electric", "Rock", "Steel"}, {}, {"Rock", "Ice", "Electric"}, {"Grass", "Fighting", "Bug"}, {"Ground"});
+    bool found_type = false;
+
+    PkmnType combo("", {}, {}, {}, {}, {}, {});
+    
+    string other_type_name;
+    PkmnType other_type("", {}, {}, {}, {}, {}, {});
+    
+    int num_strengths;
+    int max_strengths = 0;
+    
+    
+    vector < PkmnType > combo_holder;
+    vector < string > combo_names;
+    
+    string combo_with_count;
+
+    //set the type object by finding its associated object in the map
+    for (auto const &pair : types_map){
+
+        if (pair.second.name == type_name){
+            type = pair.second;
+            found_type = true;
+        }
+
+    }
+
+    //make sure the type name requested does belong to one of the types in the types map
+    if (found_type == false){
+        cout << "ERROR: No type named " + type_name;
+        return;
+    }
+
+    //loop through the type map, test combos, and find the best one
+    for (auto const &pair : types_map){
+        other_type = pair.second;
+        other_type_name = other_type.name;
+
+        // make sure we're not checking the combination of a type with itself
+        if (type_name != other_type_name){
+            combo = type.getCombo(other_type);
+            num_strengths = int(combo.strengths.size());
+            
+            if(num_strengths > max_strengths){
+                max_strengths = num_strengths;
+                
+            }
+
+            combo_holder.push_back(combo); 
+        
+        }
+    }
+
+    // now that we have the highest strength of all the combinations,
+    // start from that highest strength, then go down to 0
+    // for each strength, find the combination that has that number of strengths we're checking, 
+    // then add that combo's name (with the current num_strengths added to the end in parentheses) to the returned vector
+    for (int current_s = max_strengths; current_s >= 0; current_s--){
+        
+        for (int i = 0; i < int(combo_holder.size()); i++){
+            
+            combo = combo_holder[i];
+            
+            num_strengths = int(combo.strengths.size());
+            
+            if (num_strengths == current_s){
+                combo_with_count = combo.name;
+                combo_with_count += "(" + to_string(num_strengths) + ")";
+                combo_names.push_back(combo_with_count);
+            }
+        }
+        
+    }
+
+    cout << "Strengths of " << type_name << "-Type Combinations: \n";    
+    print1DVector(combo_names);
+    return;
+}
+
+void askUser(map <string, PkmnType> types_map){
+    string actions[] = {"1: Get all the stats of a single type combination", "2: The strengths, of each combination with a given type", "3: The weaknesses, of each combination with a given type", "4: The resistances, of each combination with a given type"};
+
+    for (int i = 0; i < int(sizeof(actions)/sizeof(actions[0])); i++){
+        cout << actions[i] << "\n";
+    }
+    cout << "\n";
+
+    string action;
+    cout << "Enter a single number for what you'd like to choose.";
+    cin >> action;
+
+    string type1;
+    string type2;
+        
+    if (action == "1"){
+        cout << "please enter a type: \n";
+        cin >> type1;
+        cout << "please enter a second type: \n";
+        cin >> type2;
+
+        printCombo(type1, type2, types_map);
+
+    } else if (action == "2"){
+        cout << "please enter a type: \n";
+        cin >> type1;
+        findMostStrengths(type1, types_map);
+
+    } else if (action == "3"){
+        cout << "please enter a type: \n";
+        cin >> type1;
+        findLeastWeaknesses(type1, types_map);
+
+    } else if (action == "4"){
+        cout << "please enter a type: \n";
+        cin >> type1;
+        findMostResistances(type1, types_map);
+
+    } else {
+        cout << "ERROR-you haven't entered a number for one of the possible actions.";
+        cout << "Please enter a single number representing one of the given actions.";
+    }
+
+}
+
+map <string, PkmnType> loadTypesMap(){
+    std::map <string, PkmnType> types;
+    // https://www.javatpoint.com/post/cpp-map-find-function
     PkmnType Grass("Grass", {"Water", "Ground", "Rock"}, {"Fire", "Grass", "Poison", "Flying", "Bug", "Dragon", "Steel"}, {}, {"Fire", "Ice", "Poison", "Flying", "Bug"}, {"Water", "Grass", "Electric", "Ground"}, {});
-    PkmnType Steel("Steel", {"Ice", "Rock", "Fairy"}, {"Fire", "Water", "Electric", "Steel"}, {}, {"Fire", "Fighting", "Ground"}, {"Normal", "Grass", "Ice", "Flying", "Psychic", "Bug", "Rock", "Dragon", "Steel", "Fairy"}, {"Poison"});
-    PkmnType Fighting("Fighting", {"Normal", "Ice", "Rock", "Dark", "Steel"}, {"Poison", "Flying", "Psychic", "Bug", "Fairy"}, {"Ghost"}, {"Flying", "Psychic", "Fairy"}, {"Bug", "Rock", "Dark"}, {});
-    PkmnType Ghost("Ghost", {"Psychic", "Ghost"}, {"Dark"}, {"Normal"}, {"Ghost", "Dark"}, {"Poison", "Bug"}, {"Normal", "Fighting"});
+    PkmnType Fire ("Fire", {"Ice", "Bug", "Grass", "Steel"}, {"Fire", "Water", "Rock", "Dragon"}, {}, {"Water", "Ground", "Rock"}, {"Fire", "Grass", "Ice", "Bug", "Steel", "Fairy"}, {});
+    PkmnType Water("Water", {"Fire", "Rock", "Ground"}, {"Water", "Grass", "Electric"}, {}, {"Electric", "Grass"}, {"Water", "Ice", "Fire"}, {});
+    
     PkmnType Normal("Normal", {}, {"Rock", "Steel"}, {"Ghost"}, {"Fighting"}, {}, {"Ghost"});
-    PkmnType Psychic("Psychic", {"Fighting", "Poison"}, {"Psychic", "Steel"}, {"Dark"}, {"Bug", "Ghost", "Dark"}, {"Fighting", "Psychic"}, {});
-    PkmnType Poison("Poison", {"Grass", "Fairy"}, {"Poison", "Ground", "Rock", "Ghost"}, {"Steel"}, {"Ground", "Psychic"}, {"Grass", "Fighting", "Poison", "Bug", "Fairy"}, {});
+
+    PkmnType Bug ("Bug", {"Grass", "Psychic", "Dark"}, {"Fire", "Fighting", "Poison", "Flying", "Ghost", "Steel", "Fairy"}, {}, {"Fire", "Flying", "Rock"}, {"Grass", "Fighting", "Ground"}, {});
+
+    PkmnType Flying("Flying", {"Grass", "Fighting", "Bug"}, {"Electric", "Rock", "Steel"}, {}, {"Rock", "Ice", "Electric"}, {"Grass", "Fighting", "Bug"}, {"Ground"});
     PkmnType Electric("Electric", {"Water", "Flying"}, {"Grass", "Electric", "Dragon"}, {"Ground"}, {"Ground"}, {"Electric", "Flying", "Steel"}, {});
-    PkmnType Fairy("Fairy", {"Fighting", "Dragon", "Dark"}, {"Fire", "Posion", "Steel"}, {}, {"Poison", "Steel"}, {"Fighting", "Bug", "Dark"}, {"Dragon"});
+
     PkmnType Rock ("Rock", {"Fire", "Ice", "Flying", "Bug"}, {"Fighting", "Ground", "Steel"}, {}, {"Water", "Grass", "Fighting", "Ground", "Steel"}, {"Normal", "Fire", "Poison", "Flying"}, {});
     PkmnType Ground("Ground", {"Fire", "Electric", "Poison", "Rock", "Steel"}, {"Grass", "Bug"}, {"Flying"}, {"Water", "Grass", "Ice"}, {"Poison", "Rock"}, {"Electric"});
-    PkmnType Dark("Dark", {"Psychic", "Ghost"}, {"Fighting", "Dark", "Fairy"}, {}, {"Fighting", "Bug", "Fairy"}, {"Ghost", "Dark"}, {"Psychic"});
-    PkmnType Bug ("Bug", {"Grass", "Psychic", "Dark"}, {"Fire", "Fighting", "Poison", "Flying", "Ghost", "Steel", "Fairy"}, {}, {"Fire", "Flying", "Rock"}, {"Grass", "Fighting", "Ground"}, {});
     
+    PkmnType Fighting("Fighting", {"Normal", "Ice", "Rock", "Dark", "Steel"}, {"Poison", "Flying", "Psychic", "Bug", "Fairy"}, {"Ghost"}, {"Flying", "Psychic", "Fairy"}, {"Bug", "Rock", "Dark"}, {});
+    PkmnType Psychic("Psychic", {"Fighting", "Poison"}, {"Psychic", "Steel"}, {"Dark"}, {"Bug", "Ghost", "Dark"}, {"Fighting", "Psychic"}, {});
+    PkmnType Dark("Dark", {"Psychic", "Ghost"}, {"Fighting", "Dark", "Fairy"}, {}, {"Fighting", "Bug", "Fairy"}, {"Ghost", "Dark"}, {"Psychic"});
+    PkmnType Ghost("Ghost", {"Psychic", "Ghost"}, {"Dark"}, {"Normal"}, {"Ghost", "Dark"}, {"Poison", "Bug"}, {"Normal", "Fighting"});
+
+    PkmnType Ice ("Ice", {"Grass", "Ground", "Flying", "Dragon"}, {"Fire", "Water", "Ice", "Steel"}, {}, {"Fire", "Fighting", "Rock", "Steel"}, {"Ice"}, {});
+    PkmnType Steel("Steel", {"Ice", "Rock", "Fairy"}, {"Fire", "Water", "Electric", "Steel"}, {}, {"Fire", "Fighting", "Ground"}, {"Normal", "Grass", "Ice", "Flying", "Psychic", "Bug", "Rock", "Dragon", "Steel", "Fairy"}, {"Poison"});
+    PkmnType Poison("Poison", {"Grass", "Fairy"}, {"Poison", "Ground", "Rock", "Ghost"}, {"Steel"}, {"Ground", "Psychic"}, {"Grass", "Fighting", "Poison", "Bug", "Fairy"}, {});
+    
+    PkmnType Fairy("Fairy", {"Fighting", "Dragon", "Dark"}, {"Fire", "Posion", "Steel"}, {}, {"Poison", "Steel"}, {"Fighting", "Bug", "Dark"}, {"Dragon"});
+    PkmnType Dragon("Dragon", {"Dragon"}, {"Steel"}, {"Fairy"}, {"Ice", "Dragon", "Fairy"}, {"Fire", "Water", "Grass", "Electric"}, {});
+
     // used these to learn how to place an object into a map (types["Dragon"] = Dragon didn't work)
     // https://stackoverflow.com/questions/30956780/c-how-to-add-objects-to-maps-and-return-reference-to-new-created-object-inside
     // https://en.cppreference.com/w/cpp/container/map/emplace
@@ -471,14 +718,40 @@ int main() {
     types.emplace(std::make_pair("Dark", Dark) );
     types.emplace(std::make_pair("Bug", Bug) );
 
+    return types;
+}
 
-    vector <vector<string>> Some_combo = Ice.getCombo(Steel);
+int main() {
+    std::map <string, PkmnType> types;
+    types = loadTypesMap();
+    // https://www.javatpoint.com/post/cpp-map-find-function
+    PkmnType Grass = types.find("Grass")->second;
+    PkmnType Fire = types.find("Fire")->second;
+    PkmnType Water = types.find("Water")->second;
+    PkmnType Normal = types.find("Normal")->second;
+    PkmnType Bug = types.find("Bug")->second;
+    PkmnType Flying = types.find("Flying")->second;
+    PkmnType Rock = types.find("Rock")->second;
+    PkmnType Ground = types.find("Ground")->second;
+    PkmnType Fighting = types.find("Fighting")->second;
+    PkmnType Psychic = types.find("Psychic")->second;
+    PkmnType Dark = types.find("Dark")->second;
+    PkmnType Ghost = types.find("Ghost")->second;
+    PkmnType Ice = types.find("Ice")->second;
+    PkmnType Steel = types.find("Steel")->second;
+    PkmnType Poison = types.find("Poison")->second;
+    PkmnType Electric = types.find("Electric")->second;
+    PkmnType Fairy = types.find("Fairy")->second;
+    PkmnType Dragon = types.find("Ghost")->second;
 
-    //askForCombo(types);
-    //types["Steel"];
+    PkmnType some_combo = Fairy.getCombo(Ghost);
+    
+    //https://www.javatpoint.com/post/cpp-map-find-function
+    //https://www.techiedelight.com/print-keys-values-map-cpp/
 
-    findMostResistances("Steel", types);
-
+    findMostStrengths("Normal", types);
+    findLeastWeaknesses("Normal", types);
+    findMostResistances("Fighting", types);
     
 
     return 0;
