@@ -325,50 +325,6 @@ void print1DVector(vector<string> vector1D){
     }
 }
 
-//asks the user for the type names
-void printCombo(string type_name1, string type_name2, map <string, PkmnType> types_map){
-
-    PkmnType type1("type1", {},{},{},{},{},{});
-    PkmnType type2("type2", {},{},{},{},{},{});
-
-    if (types_map.find(type_name1) == types_map.end() ||  types_map.find(type_name2) == types_map.end() ){
-        cout << "ERROR: One or more type names passed to 'askForCombo()' is not in the map of known types.";
-        return;
-    }
-
-    for (auto const &pair : types_map){
-        if (pair.first == type_name1){
-            type1 = pair.second;
-            break;
-        }
-    }
-
-    for (auto const &pair : types_map){
-        if (pair.first == type_name2){
-            type2 = pair.second;
-            break;
-        }
-    }
-
-    vector <string> details = {"Strong Against", "Ineffective Against", "Doesn't Affect", "Weak To", "Resistant To", "Immune To"};
-
-    PkmnType combo("", {}, {}, {}, {}, {}, {}); 
-    combo = type1.getCombo(type2);
-    vector<vector <string> > interactions = combo.all_interactions;
-    
-    //should be 6 interactions between other types (weak against, ineffective against), so r, the number of rows, should be 6.
-    for (int r = 0; r < 6; r++){
-        cout << details[r] << ": \n";
-
-        for (int c = 0; c < int(interactions[r].size()); c++){
-            cout << interactions[r][c] << "\n";
-        }
-
-        cout << "\n";
-    }
-
-
-}
 
 //finds the type combo for a type, that has the most resistances
 void findMostResistances(string type_name, map <string, PkmnType> types_map){
