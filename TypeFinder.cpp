@@ -323,14 +323,16 @@ void print1DVector(vector<string> vector1D){
     for (int i = 0; i < int(vector1D.size()); i++){
         cout << vector1D[i] << "\n";
     }
+    cout << "\n";
 }
 
 
 //finds the type combo for a type, that has the most resistances
-void findMostResistances(string type_name, map <string, PkmnType> types_map){
+vector<string> findMostResistances(string type_name, map <string, PkmnType> types_map){
     PkmnType type("", {}, {}, {}, {}, {}, {});
     
     bool found_type = false;
+    vector<string> error_vector;
 
     PkmnType combo("", {}, {}, {}, {}, {}, {});
     
@@ -343,8 +345,13 @@ void findMostResistances(string type_name, map <string, PkmnType> types_map){
     
     vector < PkmnType > combo_holder;
     vector < string > combo_names;
+    string title_string = "Resistances of " + type_name + "-Type Combinations: ";
+    combo_names.push_back(title_string);
+
+    
     
     string combo_with_count;
+    
 
     //set the type object by finding its associated object in the map
     for (auto const &pair : types_map){
@@ -357,9 +364,9 @@ void findMostResistances(string type_name, map <string, PkmnType> types_map){
     }
 
     //make sure the type name requested does belong to one of the types in the types map
-    if (found_type == false){
-        cout << "ERROR: No type named " + type_name;
-        return;
+    if (found_type == false){        
+        error_vector.push_back("ERROR: No type named " + type_name);
+        return error_vector;
     }
 
     //loop through the type map, test combos, and find the best one
@@ -401,16 +408,15 @@ void findMostResistances(string type_name, map <string, PkmnType> types_map){
             }
         }
         
-    }
-
-    cout << "Resistances of " << type_name << "-Type Combinations: \n";    
-    print1DVector(combo_names);
-    return;
+    }   
+    
+    return combo_names;
 }
 //prints the weaknesses of every combination of type type_name (not including the type and itself)
-void findLeastWeaknesses(string type_name, map <string, PkmnType> types_map){
+vector<string> findLeastWeaknesses(string type_name, map <string, PkmnType> types_map){
     PkmnType type("", {}, {}, {}, {}, {}, {});
     bool found_type = false;
+    vector<string> error_vector;
 
     PkmnType combo("", {}, {}, {}, {}, {}, {});
     
@@ -424,6 +430,9 @@ void findLeastWeaknesses(string type_name, map <string, PkmnType> types_map){
     
     vector < PkmnType > combo_holder;
     vector < string > combo_names;
+
+    string title_string = "Weaknesses of " + type_name + "-Type Combinations:";
+    combo_names.push_back(title_string);
 
     string combo_with_count;
 
@@ -440,7 +449,8 @@ void findLeastWeaknesses(string type_name, map <string, PkmnType> types_map){
     //make sure the type name requested does belong to one of the types in the types map
     if (found_type == false){
         cout << "ERROR: No type named " + type_name;
-        return;
+        error_vector.push_back("ERROR: No type named " + type_name);
+        return error_vector;
     }
 
     //loop through the type map, test combos, and find the best one
@@ -492,15 +502,15 @@ void findLeastWeaknesses(string type_name, map <string, PkmnType> types_map){
         
     }
 
-    cout << "Weaknesses of " << type_name << "-Type Combinations: \n";    
-    print1DVector(combo_names);
-    return;
+    return combo_names;
 }
 
-void findMostStrengths(string type_name, map <string, PkmnType> types_map){
+vector<string> findMostStrengths(string type_name, map <string, PkmnType> types_map){
     PkmnType type("", {}, {}, {}, {}, {}, {});
     
     bool found_type = false;
+
+    vector<string> error_vector;
 
     PkmnType combo("", {}, {}, {}, {}, {}, {});
     
@@ -509,11 +519,12 @@ void findMostStrengths(string type_name, map <string, PkmnType> types_map){
     
     int num_strengths;
     int max_strengths = 0;
-    
-    
+
     vector < PkmnType > combo_holder;
     vector < string > combo_names;
-    
+    string title_string = "Strengths of " + type_name + "-Type Combinations: "; 
+    combo_names.push_back(title_string);
+
     string combo_with_count;
 
     //set the type object by finding its associated object in the map
@@ -529,7 +540,8 @@ void findMostStrengths(string type_name, map <string, PkmnType> types_map){
     //make sure the type name requested does belong to one of the types in the types map
     if (found_type == false){
         cout << "ERROR: No type named " + type_name;
-        return;
+        error_vector.push_back("ERROR: No type named " + type_name);
+        return error_vector;
     }
 
     //loop through the type map, test combos, and find the best one
@@ -572,10 +584,128 @@ void findMostStrengths(string type_name, map <string, PkmnType> types_map){
         }
         
     }
+    //had to figure out how to insert a value at the front of an array
+    //https://www.geeksforgeeks.org/vector-insert-function-in-c-stl/   
+    return combo_names;
+}
 
-    cout << "Strengths of " << type_name << "-Type Combinations: \n";    
-    print1DVector(combo_names);
-    return;
+vector<string> removeRepeats(vector<string> string_vector){
+    vector<string> copy_vec = string_vector;
+    vector<string> returned_vec;
+    returned_vec.push_back(string_vector[0]);
+
+    string current_item;
+    bool repeated;
+    
+    // for each item in the copy vector
+    for (int i = 0; i < int(copy_vec.size()); i++){
+        current_item = copy_vec[i];
+        repeated = false;
+
+        //check if the item is already in the returned vector
+        for (int j = 0; j < int(returned_vec.size()); j++){
+            if (returned_vec[j] == current_item){
+                repeated = true;
+            }
+        }
+
+        // if the current item is not already in the returned vector, add it
+        if (repeated == false){
+            returned_vec.push_back(current_item);
+        }
+
+    }
+
+    return returned_vec;
+}
+
+//takes a number, one of the findMost/findLeastInteraction functions, and the types map
+// returns an array with all the combinations that have the desired number when running the given function
+// ex: all the type combinations that have 2 resistances
+vector<string> returnAll(int desired_count, map<string, PkmnType> types_map, vector<string> (*findInteraction)(string, map<string, PkmnType>) ){
+    PkmnType type("", {}, {}, {}, {}, {}, {});
+    vector<string> combo_vector;
+    vector<string> all_combos;
+    vector<string> returned_combos = {};
+    string combo_str;
+ 
+    
+    //loop through each type and get the counts for all the combos with that type
+    for (auto const &pair : types_map){
+        type = pair.second;
+        combo_vector = findInteraction(type.name, types_map);
+
+        //add each string in the combo vector to the all_combos vector
+        for (int i = 0; i < int(combo_vector.size()); i++){
+            all_combos.push_back(combo_vector[i]); 
+        }
+    } 
+    
+    //loop through the entire array and for each combo string, see if its count is equal to the desired count. 
+    //If so, add that entire combo string to the returned_combos vector
+    for (int i = 0; i < int(all_combos.size()); i++){
+        combo_str = all_combos[i];
+
+        auto count = combo_str[combo_str.length() - 2]; //the count should be the second to last character in the string - "type-combo(c)"
+        
+        //https://stackoverflow.com/questions/5029840/convert-char-to-int-in-c-and-c
+        if (count - '0' == desired_count){
+            returned_combos.push_back(combo_str);
+        }
+
+    }
+    
+
+    //removeRepeats(returned_combos); //make sure we don't have the same combination more than once    
+    return returned_combos;
+}
+
+/*
+void findCombosWith(int num, string interaction, map<string, PkmnType> types_map){
+    vector<string> choices = {"'s' for strengths", "'w' for weaknesses", "'r' for resistances", "'num' to get all the combinations with a certain number of a category-\n    ex: get all the combinations with exactly 3 weaknesses"};
+    
+    vector<string> printed_combos;
+    string type_name;
+
+    if (interaction == "s"){
+        cin << type_name;
+        printed_combos = findMostStrengths(type_name);
+
+    } else if (interaction == "w"){
+        returnAll
+
+
+    } else if (interaction == "r"){
+
+    
+    } else if (interaction == "num"){
+        string interaction_name;
+        cin << interaction_name;
+
+        int count; 
+        cin << count;
+
+        <string>
+        if (interaction_name == "s"){
+            
+        }
+
+        printed_combos = returnAll(count, func, types_map);
+
+    } else {
+        cout << "ERROR: only ";
+        print1DVector(choices);
+        cout << "are allowed";
+    }
+}
+*/
+
+bool keyIsIn(string key, map <string, PkmnType> types_map){
+    if (types_map.find(key) == types_map.end()){
+        return false;
+    } else {
+        return true;
+    }
 }
 
 void askUser(map <string, PkmnType> types_map){
@@ -590,31 +720,39 @@ void askUser(map <string, PkmnType> types_map){
     cout << "Enter a single number for what you'd like to choose.";
     cin >> action;
 
-    string type1;
-    string type2;
+    string type_name1;
+    string type_name2;
         
+    PkmnType type1("", {}, {}, {}, {}, {}, {});
+    PkmnType type2("", {}, {}, {}, {}, {}, {});
+
     if (action == "1"){
         cout << "please enter a type: \n";
-        cin >> type1;
+        cin >> type_name1;
         cout << "please enter a second type: \n";
-        cin >> type2;
+        cin >> type_name2;
 
-        printCombo(type1, type2, types_map);
+        if (keyIsIn(type_name1, types_map) && keyIsIn(type_name2, types_map) ){
+            type1 = types_map.find(type_name1)->second;
+            type2 = types_map.find(type_name2)->second;
+        }
+
+        PkmnType combo = type1.getCombo(type2);
 
     } else if (action == "2"){
         cout << "please enter a type: \n";
-        cin >> type1;
-        findMostStrengths(type1, types_map);
+        cin >> type_name1;
+        findMostStrengths(type_name1, types_map);
 
     } else if (action == "3"){
         cout << "please enter a type: \n";
-        cin >> type1;
-        findLeastWeaknesses(type1, types_map);
+        cin >> type_name1;
+        findLeastWeaknesses(type_name1, types_map);
 
     } else if (action == "4"){
         cout << "please enter a type: \n";
-        cin >> type1;
-        findMostResistances(type1, types_map);
+        cin >> type_name1;
+        findMostResistances(type_name1, types_map);
 
     } else {
         cout << "ERROR-you haven't entered a number for one of the possible actions.";
@@ -705,10 +843,13 @@ int main() {
     //https://www.javatpoint.com/post/cpp-map-find-function
     //https://www.techiedelight.com/print-keys-values-map-cpp/
 
-    findMostStrengths("Normal", types);
-    findLeastWeaknesses("Normal", types);
-    findMostResistances("Fighting", types);
+    vector<string> normal_strengths = findMostStrengths("Fighting", types);
+    print1DVector(normal_strengths);
+    print1DVector(findLeastWeaknesses("Fighting", types));
+    print1DVector(findMostResistances("Fighting", types));
     
+    print1DVector(returnAll(10, types, &findLeastWeaknesses));
+
 
     return 0;
 }
