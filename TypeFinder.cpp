@@ -628,13 +628,14 @@ vector<string> returnAll(int desired_count, map<string, PkmnType> types_map, vec
     vector<string> all_combos;
     vector<string> returned_combos = {};
     string combo_str;
- 
+    //string type_name;
     
     //loop through each type and get the counts for all the combos with that type
     for (auto const &pair : types_map){
-        type = pair.second;
-        combo_vector = findInteraction(type.name, types_map);
-
+        const string type_name = pair.second.name;
+        cout << type.name << "\n";
+        combo_vector = findInteraction(type_name, types_map);
+        
         //add each string in the combo vector to the all_combos vector
         for (int i = 0; i < int(combo_vector.size()); i++){
             all_combos.push_back(combo_vector[i]); 
@@ -707,7 +708,7 @@ bool keyIsIn(string key, map <string, PkmnType> types_map){
         return true;
     }
 }
-
+/*
 void askUser(map <string, PkmnType> types_map){
     string actions[] = {"1: Get all the stats of a single type combination", "2: The strengths, of each combination with a given type", "3: The weaknesses, of each combination with a given type", "4: The resistances, of each combination with a given type"};
 
@@ -759,7 +760,7 @@ void askUser(map <string, PkmnType> types_map){
         cout << "Please enter a single number representing one of the given actions.";
     }
 
-}
+}*/
 
 map <string, PkmnType> loadTypesMap(){
     std::map <string, PkmnType> types;
@@ -848,7 +849,7 @@ int main() {
     print1DVector(findLeastWeaknesses("Fighting", types));
     print1DVector(findMostResistances("Fighting", types));
     
-    print1DVector(returnAll(10, types, &findLeastWeaknesses));
+    print1DVector(returnAll(2, types, &findLeastWeaknesses));
 
 
     return 0;
